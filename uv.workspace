@@ -1,0 +1,27 @@
+{
+    "constraints_files": [
+        "requirements/common-constraints.txt"
+    ],
+    "requirements_files": [
+        {
+            "input": "requirements/requirements.in",
+            "output": "requirements.txt"
+        },
+        {
+            "input": "requirements/requirements-dev.in",
+            "output": "requirements/requirements-dev.txt"
+        },
+        {
+            "input": "requirements/requirements-help.in", 
+            "output": "requirements/requirements-help.txt"
+        },
+        {
+            "input": "requirements/requirements-browser.in",
+            "output": "requirements/requirements-browser.txt"
+        },
+        {
+            "input": "requirements/requirements-playwright.in",
+            "output": "requirements/requirements-playwright.txt"
+        }
+    ]
+}
