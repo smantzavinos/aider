@@ -146,7 +146,10 @@
                     nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [
                       final.setuptools
                       final.setuptools-scm
-                      final.tomli  # Add explicit tomli dependency
+                      final.tomli
+                    ];
+                    buildInputs = (old.buildInputs or [ ]) ++ [
+                      final.tomli
                     ];
                   });
                 })
