@@ -157,9 +157,9 @@
                   ];
 
                   # Override torch to use CUDA-enabled version
-                  torch = prev.torch.override {
+                  torch = prev.torch.overridePythonAttrs (old: {
                     cudaSupport = true;
-                  };
+                  });
 
                   # Fix imgcat build
                   imgcat = prev.imgcat.overrideAttrs (old: {
