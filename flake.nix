@@ -133,7 +133,6 @@
           pure = let
             # Create an overlay enabling editable mode for all local dependencies.
             editableOverlay = workspace.mkEditablePyprojectOverlay {
-              # Use environment variable
               root = "$REPO_ROOT";
             };
 
@@ -142,43 +141,67 @@
               lib.composeManyExtensions [
                 editableOverlay
                 (final: prev: {
-                  aider-chat = prev.aider-chat.overrideAttrs (old: {
-                    nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [
+                  # Make setuptools available to all packages
+                  pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
+                    (pyFinal: pyPrev: {
+                      setuptools = pyPrev.setuptools;
+                      pip = pyPrev.pip;
+                      wheel = pyPrev.wheel;
+                    })
+                  ];
+
+                  # Fix imgcat build
+                  imgcat = prev.imgcat.overridePythonAttrs (old: {
+                    nativeBuildInputs = (old.nativeBuildInputs or []) ++ [
+                      final.setuptools
+                      final.pip
+                      final.wheel
+                    ];
+                    format = "pyproject";
+                  });
+
+                  # Fix aider-chat build
+                  aider-chat = prev.aider-chat.overridePythonAttrs (old: {
+                    nativeBuildInputs = (old.nativeBuildInputs or []) ++ [
                       final.setuptools
                       final.setuptools-scm
                       final.tomli
+                      final.pip
+                      final.wheel
                     ];
-                    buildInputs = (old.buildInputs or [ ]) ++ [
+                    buildInputs = (old.buildInputs or []) ++ [
                       final.tomli
                     ];
+                    format = "pyproject";
                   });
                 })
               ]
             );
 
-            # Build virtual environment, with local packages being editable
+            # Build virtual environment with local packages being editable
             virtualenv = editablePythonSet.mkVirtualEnv "aider-dev-env" workspace.deps.all;
 
-          in
-          pkgs.mkShell {
+          in pkgs.mkShell {
             packages = [
               virtualenv
               pkgs.uv
             ];
 
+            nativeBuildInputs = [
+              python
+              pkgs.setuptools
+              pkgs.pip
+              pkgs.wheel
+            ];
+
             env = {
-              # Don't create venv using uv
               UV_NO_SYNC = "1";
-              # Force uv to use Python interpreter from venv
               UV_PYTHON = "${virtualenv}/bin/python";
-              # Prevent uv from downloading managed Python's
               UV_PYTHON_DOWNLOADS = "never";
+              PYTHONPATH = lib.makeSearchPath python.sitePackages [virtualenv];
             };
 
             shellHook = ''
-              # Undo dependency propagation by nixpkgs.
-              unset PYTHONPATH
-              # Get repository root using git
               export REPO_ROOT=$(git rev-parse --show-toplevel)
             '';
           };
