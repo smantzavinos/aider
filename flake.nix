@@ -151,7 +151,7 @@
                   ];
 
                   # Fix imgcat build
-                  imgcat = prev.imgcat.overridePythonAttrs (old: {
+                  imgcat = prev.imgcat.overrideAttrs (old: {
                     nativeBuildInputs = (old.nativeBuildInputs or []) ++ [
                       final.setuptools
                       final.pip
@@ -161,7 +161,7 @@
                   });
 
                   # Fix aider-chat build
-                  aider-chat = prev.aider-chat.overridePythonAttrs (old: {
+                  aider-chat = prev.aider-chat.overrideAttrs (old: {
                     nativeBuildInputs = (old.nativeBuildInputs or []) ++ [
                       final.setuptools
                       final.setuptools-scm
