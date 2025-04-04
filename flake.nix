@@ -27,7 +27,13 @@
   outputs = { self, nixpkgs, flake-utils, uv2nix, pyproject-nix, pyproject-build-systems, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        pkgs = nixpkgs.legacyPackages.${system};
+        pkgs = import nixpkgs {
+          inherit system;
+          config = {
+            allowUnfree = true;
+            cudaSupport = true;
+          };
+        };
         python = pkgs.python311;
         inherit (nixpkgs) lib;
 
@@ -150,8 +156,10 @@
                     })
                   ];
 
-                  # Override torch to use CPU-only version
-                  torch = prev.pytorch-bin;
+                  # Override torch to use CUDA-enabled version
+                  torch = prev.python3Packages.pytorch-bin.override {
+                    cudaSupport = true;
+                  };
 
                   # Fix imgcat build
                   imgcat = prev.imgcat.overrideAttrs (old: {
