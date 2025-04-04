@@ -189,9 +189,9 @@
 
             nativeBuildInputs = [
               python
-              pkgs.setuptools
-              pkgs.pip
-              pkgs.wheel
+              python.pkgs.setuptools
+              python.pkgs.pip
+              python.pkgs.wheel
             ];
 
             env = {
