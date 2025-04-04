@@ -166,6 +166,28 @@
                     format = "pyproject";
                   });
 
+                  # Add cusparse override
+                  nvidia-cusparse-cu12 = prev.nvidia-cusparse-cu12.overrideAttrs (old: {
+                    nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ pkgs.autoPatchelfHook ];
+                    buildInputs = (old.buildInputs or []) ++ [
+                      pkgs.cudaPackages.cuda_cudart
+                      pkgs.cudaPackages.libnvjitlink
+                    ];
+                    
+                    runtimeDependencies = (old.runtimeDependencies or []) ++ [
+                      pkgs.cudaPackages.cuda_cudart
+                      pkgs.cudaPackages.libnvjitlink
+                    ];
+
+                    postFixup = ''
+                      ${old.postFixup or ""}
+                      patchelf --set-rpath "${pkgs.lib.makeLibraryPath [
+                        pkgs.cudaPackages.cuda_cudart
+                        pkgs.cudaPackages.libnvjitlink
+                      ]}" $out/lib/python*/site-packages/nvidia/cusparse/lib/libcusparse.so.12
+                    '';
+                  });
+
                   # Add cusolver override
                   nvidia-cusolver-cu12 = prev.nvidia-cusolver-cu12.overrideAttrs (old: {
                     nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ pkgs.autoPatchelfHook ];
@@ -225,6 +247,8 @@
                       pkgs.cudaPackages.libcusparse
                       pkgs.cudaPackages.libnvjitlink
                       final.nvidia-cusolver-cu12
+                      final.nvidia-cusparse-cu12
+                      final.nvidia-cusparse-cu12
                     ];
 
                     # Set LD_LIBRARY_PATH
