@@ -166,7 +166,8 @@
                       pkgs.cudaPackages.libcublas
                       pkgs.cudaPackages.libcusolver
                       pkgs.cudaPackages.libcusparse
-                      pkgs.cudaPackages.cuda_nvjitlink
+                      # pkgs.cudaPackages.cuda_nvjitlink
+                      pkgs.cudaPackages.libnvjitlink
                     ];
                   });
 
