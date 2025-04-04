@@ -176,9 +176,31 @@
                       pkgs.cudaPackages.libcublas
                       pkgs.cudaPackages.libcusolver
                       pkgs.cudaPackages.libcusparse
-                      # pkgs.cudaPackages.cuda_nvjitlink
                       pkgs.cudaPackages.libnvjitlink
                     ];
+                    
+                    # Add runtime dependencies
+                    runtimeDependencies = (old.runtimeDependencies or []) ++ [
+                      pkgs.cudaPackages.cuda_cudart
+                      pkgs.cudaPackages.libcublas
+                      pkgs.cudaPackages.libcublasLt
+                      pkgs.cudaPackages.libcusolver
+                      pkgs.cudaPackages.libcusparse
+                      pkgs.cudaPackages.libnvjitlink
+                    ];
+
+                    # Set LD_LIBRARY_PATH
+                    postFixup = ''
+                      ${old.postFixup or ""}
+                      addAutoPatchelfSearchPath ${pkgs.lib.makeLibraryPath [
+                        pkgs.cudaPackages.cuda_cudart
+                        pkgs.cudaPackages.libcublas
+                        pkgs.cudaPackages.libcublasLt
+                        pkgs.cudaPackages.libcusolver
+                        pkgs.cudaPackages.libcusparse
+                        pkgs.cudaPackages.libnvjitlink
+                      ]}
+                    '';
                   });
 
                   # Fix imgcat build
