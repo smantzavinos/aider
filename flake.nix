@@ -159,6 +159,15 @@
                   # Override torch to use CUDA-enabled version
                   torch = prev.torch.overrideAttrs (old: {
                     cudaSupport = true;
+                    buildInputs = (old.buildInputs or []) ++ [
+                      pkgs.cudaPackages.cuda_nvcc
+                      pkgs.cudaPackages.cuda_cudart
+                      pkgs.cudaPackages.cuda_nvrtc
+                      pkgs.cudaPackages.libcublas
+                      pkgs.cudaPackages.libcusolver
+                      pkgs.cudaPackages.libcusparse
+                      pkgs.cudaPackages.cuda_nvjitlink
+                    ];
                   });
 
                   # Fix imgcat build
