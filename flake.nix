@@ -173,7 +173,7 @@
                       pkgs.cudaPackages.cuda_nvcc
                       pkgs.cudaPackages.cuda_cudart
                       pkgs.cudaPackages.cuda_nvrtc
-                      pkgs.cudaPackages.libcublas
+                      pkgs.cudaPackages.libcublas  # This includes libcublasLt
                       pkgs.cudaPackages.libcusolver
                       pkgs.cudaPackages.libcusparse
                       pkgs.cudaPackages.libnvjitlink
@@ -182,7 +182,7 @@
                     # Add runtime dependencies
                     runtimeDependencies = (old.runtimeDependencies or []) ++ [
                       pkgs.cudaPackages.cuda_cudart
-                      pkgs.cudaPackages.libcublas
+                      pkgs.cudaPackages.libcublas  # This includes libcublasLt
                       pkgs.cudaPackages.libcusolver
                       pkgs.cudaPackages.libcusparse
                       pkgs.cudaPackages.libnvjitlink
@@ -193,7 +193,7 @@
                       ${old.postFixup or ""}
                       addAutoPatchelfSearchPath ${pkgs.lib.makeLibraryPath [
                         pkgs.cudaPackages.cuda_cudart
-                        pkgs.cudaPackages.libcublas
+                        pkgs.cudaPackages.libcublas  # This includes libcublasLt
                         pkgs.cudaPackages.libcusolver
                         pkgs.cudaPackages.libcusparse
                         pkgs.cudaPackages.libnvjitlink
@@ -250,6 +250,15 @@
               UV_PYTHON = "${virtualenv}/bin/python";
               UV_PYTHON_DOWNLOADS = "never";
               PYTHONPATH = lib.makeSearchPath python.sitePackages [virtualenv];
+                
+              # Add CUDA library paths
+              LD_LIBRARY_PATH = lib.makeLibraryPath [
+                pkgs.cudaPackages.cuda_cudart
+                pkgs.cudaPackages.libcublas  # This includes libcublasLt
+                pkgs.cudaPackages.libcusolver
+                pkgs.cudaPackages.libcusparse
+                pkgs.cudaPackages.libnvjitlink
+              ];
             };
 
             shellHook = ''
