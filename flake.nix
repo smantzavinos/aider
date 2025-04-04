@@ -150,6 +150,11 @@
                     })
                   ];
 
+                  # Override torch to use CPU-only version
+                  torch = prev.torch-bin.override {
+                    enableCuda = false;
+                  };
+
                   # Fix imgcat build
                   imgcat = prev.imgcat.overrideAttrs (old: {
                     nativeBuildInputs = (old.nativeBuildInputs or []) ++ [
