@@ -100,29 +100,32 @@
           };
         };
 
-        devShells.default = pkgs.mkShell {
-          packages = [
-            # aider
-            python
-            pkgs.uv
-          ];
+        devShells = {
+        
+          impure = pkgs.mkShell {
+            packages = [
+              # aider
+              python
+              pkgs.uv
+            ];
     
-          env = {
-            # Prevent uv from managing Python downloads
-            UV_PYTHON_DOWNLOADS = "never";
-            # Force uv to use nixpkgs Python interpreter
-            UV_PYTHON = python.interpreter;
-            # Ensure Python can find the package
-            # PYTHONPATH = "${aider}/${python.sitePackages}:$PYTHONPATH";
-          }// lib.optionalAttrs pkgs.stdenv.isLinux {
-              # Python libraries often load native shared objects using dlopen(3).
-              # Setting LD_LIBRARY_PATH makes the dynamic library loader aware of libraries without using RPATH for lookup.
-              LD_LIBRARY_PATH = lib.makeLibraryPath pkgs.pythonManylinuxPackages.manylinux1;
+            env = {
+              # Prevent uv from managing Python downloads
+              UV_PYTHON_DOWNLOADS = "never";
+              # Force uv to use nixpkgs Python interpreter
+              UV_PYTHON = python.interpreter;
+              # Ensure Python can find the package
+              # PYTHONPATH = "${aider}/${python.sitePackages}:$PYTHONPATH";
+            }// lib.optionalAttrs pkgs.stdenv.isLinux {
+                # Python libraries often load native shared objects using dlopen(3).
+                # Setting LD_LIBRARY_PATH makes the dynamic library loader aware of libraries without using RPATH for lookup.
+                LD_LIBRARY_PATH = lib.makeLibraryPath pkgs.pythonManylinuxPackages.manylinux1;
+            };
+    
+            shellHook = ''
+              unset PYTHONPATH
+            '';
           };
-    
-          shellHook = ''
-            unset PYTHONPATH
-          '';
         };
       });
 }
