@@ -183,7 +183,6 @@
                     runtimeDependencies = (old.runtimeDependencies or []) ++ [
                       pkgs.cudaPackages.cuda_cudart
                       pkgs.cudaPackages.libcublas
-                      pkgs.cudaPackages.libcublasLt
                       pkgs.cudaPackages.libcusolver
                       pkgs.cudaPackages.libcusparse
                       pkgs.cudaPackages.libnvjitlink
@@ -195,7 +194,6 @@
                       addAutoPatchelfSearchPath ${pkgs.lib.makeLibraryPath [
                         pkgs.cudaPackages.cuda_cudart
                         pkgs.cudaPackages.libcublas
-                        pkgs.cudaPackages.libcublasLt
                         pkgs.cudaPackages.libcusolver
                         pkgs.cudaPackages.libcusparse
                         pkgs.cudaPackages.libnvjitlink
