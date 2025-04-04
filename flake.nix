@@ -156,6 +156,16 @@
                     })
                   ];
 
+                  # Fix pyperclip build
+                  pyperclip = prev.pyperclip.overrideAttrs (old: {
+                    nativeBuildInputs = (old.nativeBuildInputs or []) ++ [
+                      final.setuptools
+                      final.pip
+                      final.wheel
+                    ];
+                    format = "pyproject";
+                  });
+
                   # Override torch to use CUDA-enabled version
                   torch = prev.torch.overrideAttrs (old: {
                     cudaSupport = true;
