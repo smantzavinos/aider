@@ -157,7 +157,7 @@
                   ];
 
                   # Override torch to use CUDA-enabled version
-                  torch = prev.torch.overridePythonAttrs (old: {
+                  torch = prev.torch.overrideAttrs (old: {
                     cudaSupport = true;
                   });
 
