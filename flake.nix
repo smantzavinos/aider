@@ -166,15 +166,12 @@
                     format = "pyproject";
                   });
 
-                  # Override torch to use CUDA-enabled version
-                  torch = prev.torch.overrideAttrs (old: {
-                    cudaSupport = true;
+                  # Add cusolver override
+                  nvidia-cusolver-cu12 = prev.nvidia-cusolver-cu12.overrideAttrs (old: {
+                    nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ pkgs.autoPatchelfHook ];
                     buildInputs = (old.buildInputs or []) ++ [
-                      pkgs.cudaPackages.cuda_nvcc
                       pkgs.cudaPackages.cuda_cudart
-                      pkgs.cudaPackages.cuda_nvrtc
-                      pkgs.cudaPackages.libcublas  # This includes libcublasLt
-                      pkgs.cudaPackages.libcusolver
+                      pkgs.cudaPackages.libcublas
                       pkgs.cudaPackages.libcusparse
                       pkgs.cudaPackages.libnvjitlink
                     ];
@@ -182,10 +179,52 @@
                     # Add runtime dependencies
                     runtimeDependencies = (old.runtimeDependencies or []) ++ [
                       pkgs.cudaPackages.cuda_cudart
-                      pkgs.cudaPackages.libcublas  # This includes libcublasLt
+                      pkgs.cudaPackages.libcublas
+                      pkgs.cudaPackages.libcusparse
+                      pkgs.cudaPackages.libnvjitlink
+                    ];
+
+                    # Set RPATH for the libraries
+                    postFixup = ''
+                      ${old.postFixup or ""}
+                      patchelf --set-rpath "${pkgs.lib.makeLibraryPath [
+                        pkgs.cudaPackages.cuda_cudart
+                        pkgs.cudaPackages.libcublas
+                        pkgs.cudaPackages.libcusparse
+                        pkgs.cudaPackages.libnvjitlink
+                      ]}" $out/lib/python*/site-packages/nvidia/cusolver/lib/libcusolver.so.11
+                      
+                      patchelf --set-rpath "${pkgs.lib.makeLibraryPath [
+                        pkgs.cudaPackages.cuda_cudart
+                        pkgs.cudaPackages.libcublas
+                        pkgs.cudaPackages.libcusparse
+                        pkgs.cudaPackages.libnvjitlink
+                      ]}" $out/lib/python*/site-packages/nvidia/cusolver/lib/libcusolverMg.so.11
+                    '';
+                  });
+
+                  # Override torch to use CUDA-enabled version
+                  torch = prev.torch.overrideAttrs (old: {
+                    cudaSupport = true;
+                    buildInputs = (old.buildInputs or []) ++ [
+                      pkgs.cudaPackages.cuda_nvcc
+                      pkgs.cudaPackages.cuda_cudart
+                      pkgs.cudaPackages.cuda_nvrtc
+                      pkgs.cudaPackages.libcublas
                       pkgs.cudaPackages.libcusolver
                       pkgs.cudaPackages.libcusparse
                       pkgs.cudaPackages.libnvjitlink
+                      final.nvidia-cusolver-cu12
+                    ];
+                    
+                    # Add runtime dependencies
+                    runtimeDependencies = (old.runtimeDependencies or []) ++ [
+                      pkgs.cudaPackages.cuda_cudart
+                      pkgs.cudaPackages.libcublas
+                      pkgs.cudaPackages.libcusolver
+                      pkgs.cudaPackages.libcusparse
+                      pkgs.cudaPackages.libnvjitlink
+                      final.nvidia-cusolver-cu12
                     ];
 
                     # Set LD_LIBRARY_PATH
@@ -193,7 +232,7 @@
                       ${old.postFixup or ""}
                       addAutoPatchelfSearchPath ${pkgs.lib.makeLibraryPath [
                         pkgs.cudaPackages.cuda_cudart
-                        pkgs.cudaPackages.libcublas  # This includes libcublasLt
+                        pkgs.cudaPackages.libcublas
                         pkgs.cudaPackages.libcusolver
                         pkgs.cudaPackages.libcusparse
                         pkgs.cudaPackages.libnvjitlink
