@@ -236,6 +236,12 @@
                       pkgs.cudaPackages.libcusolver
                       pkgs.cudaPackages.libcusparse
                       pkgs.cudaPackages.libnvjitlink
+                      pkgs.cudaPackages.cudnn
+                      pkgs.cudaPackages.nccl
+                      pkgs.cudaPackages.cuda_cufft
+                      pkgs.cudaPackages.cuda_curand
+                      pkgs.cudaPackages.cuda_cupti
+                      pkgs.cudaPackages.cuda_nvtx
                       final.nvidia-cusolver-cu12
                     ];
                     
@@ -246,8 +252,13 @@
                       pkgs.cudaPackages.libcusolver
                       pkgs.cudaPackages.libcusparse
                       pkgs.cudaPackages.libnvjitlink
+                      pkgs.cudaPackages.cudnn
+                      pkgs.cudaPackages.nccl
+                      pkgs.cudaPackages.cuda_cufft
+                      pkgs.cudaPackages.cuda_curand
+                      pkgs.cudaPackages.cuda_cupti
+                      pkgs.cudaPackages.cuda_nvtx
                       final.nvidia-cusolver-cu12
-                      final.nvidia-cusparse-cu12
                       final.nvidia-cusparse-cu12
                     ];
 
@@ -260,6 +271,12 @@
                         pkgs.cudaPackages.libcusolver
                         pkgs.cudaPackages.libcusparse
                         pkgs.cudaPackages.libnvjitlink
+                        pkgs.cudaPackages.cudnn
+                        pkgs.cudaPackages.nccl
+                        pkgs.cudaPackages.cuda_cufft
+                        pkgs.cudaPackages.cuda_curand
+                        pkgs.cudaPackages.cuda_cupti
+                        pkgs.cudaPackages.cuda_nvtx
                       ]}
                     '';
                   });
