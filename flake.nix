@@ -228,6 +228,7 @@
                   # Override torch to use CUDA-enabled version
                   torch = prev.torch.overrideAttrs (old: {
                     cudaSupport = true;
+                    
                     buildInputs = (old.buildInputs or []) ++ [
                       pkgs.cudaPackages.cuda_nvcc
                       pkgs.cudaPackages.cuda_cudart
@@ -244,7 +245,12 @@
                       pkgs.cudaPackages.cuda_nvtx
                       final.nvidia-cusolver-cu12
                     ];
-                    
+
+                    nativeBuildInputs = (old.nativeBuildInputs or []) ++ [
+                      pkgs.autoPatchelfHook
+                      pkgs.makeWrapper
+                    ];
+
                     runtimeDependencies = (old.runtimeDependencies or []) ++ [
                       pkgs.cudaPackages.cuda_cudart
                       pkgs.cudaPackages.libcublas
@@ -261,20 +267,25 @@
                       final.nvidia-cusparse-cu12
                     ];
 
-                    # Add autoPatchelfHook to nativeBuildInputs
-                    nativeBuildInputs = (old.nativeBuildInputs or []) ++ [
-                      pkgs.autoPatchelfHook
-                    ];
-
-                    postFixup = ''
-                      ${old.postFixup or ""}
+                    postInstall = ''
+                      ${old.postInstall or ""}
                       
-                      # Create symlink for libcudnn.so.8
+                      # Create lib directory
                       mkdir -p $out/lib
-                      ln -s ${pkgs.cudaPackages.cudnn}/lib/libcudnn.so.* $out/lib/
                       
-                      # Add all required library paths to RPATH
-                      addAutoPatchelfSearchPath ${pkgs.lib.makeLibraryPath [
+                      # Create symlinks for CUDNN
+                      ln -s ${pkgs.cudaPackages.cudnn}/lib/libcudnn.so* $out/lib/
+                      
+                      # Ensure the torch lib directory exists
+                      mkdir -p $out/lib/python*/site-packages/torch/lib
+                      
+                      # Copy CUDNN libraries directly to torch lib directory
+                      cp -P ${pkgs.cudaPackages.cudnn}/lib/libcudnn.so* $out/lib/python*/site-packages/torch/lib/
+                    '';
+
+                    preFixup = ''
+                      # Add CUDA libraries to RPATH
+                      CUDA_LIBS="${lib.makeLibraryPath ([
                         pkgs.cudaPackages.cuda_cudart
                         pkgs.cudaPackages.libcublas
                         pkgs.cudaPackages.libcusolver
@@ -286,29 +297,38 @@
                         pkgs.cudaPackages.libcurand
                         pkgs.cudaPackages.cuda_cupti
                         pkgs.cudaPackages.cuda_nvtx
-                      ]}
+                        final.nvidia-cusolver-cu12
+                        final.nvidia-cusparse-cu12
+                      ])}"
 
-                      # Explicitly set RPATH for torch libraries
+                      # Add the output lib directory to RPATH
+                      TORCH_LIBS="$out/lib:$out/lib/python*/site-packages/torch/lib"
+                      
+                      # Patch all torch libraries
                       for lib in $out/lib/python*/site-packages/torch/lib/lib*.so*; do
                         if [ -f "$lib" ]; then
                           echo "Patching RPATH for $lib"
-                          patchelf --set-rpath "$out/lib:${pkgs.lib.makeLibraryPath [
-                            pkgs.cudaPackages.cuda_cudart
-                            pkgs.cudaPackages.libcublas
-                            pkgs.cudaPackages.libcusolver
-                            pkgs.cudaPackages.libcusparse
-                            pkgs.cudaPackages.libnvjitlink
-                            pkgs.cudaPackages.cudnn
-                            pkgs.cudaPackages.nccl
-                            pkgs.cudaPackages.libcufft
-                            pkgs.cudaPackages.libcurand
-                            pkgs.cudaPackages.cuda_cupti
-                            pkgs.cudaPackages.cuda_nvtx
-                            final.nvidia-cusolver-cu12
-                            final.nvidia-cusparse-cu12
-                          ]}" "$lib"
+                          patchelf --set-rpath "$TORCH_LIBS:$CUDA_LIBS" "$lib"
                         fi
                       done
+                    '';
+
+                    # Modified autoPatchelfHook configuration
+                    autoPatchelfIgnoreMissingDeps = true;
+                    
+                    postFixup = ''
+                      # Run auto-patchelf with specific library paths
+                      addAutoPatchelfSearchPath ${pkgs.cudaPackages.cudnn}/lib
+                      addAutoPatchelfSearchPath $out/lib
+                      addAutoPatchelfSearchPath $out/lib/python*/site-packages/torch/lib
+                      
+                      autoPatchelf "$out"
+                      
+                      # Verify CUDNN is properly linked
+                      if ! ldd $out/lib/python*/site-packages/torch/lib/libtorch_cuda.so | grep -q libcudnn.so.8; then
+                        echo "Warning: libcudnn.so.8 not found in libtorch_cuda.so dependencies"
+                        exit 1
+                      fi
                     '';
                   });
 
