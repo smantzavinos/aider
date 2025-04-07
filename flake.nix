@@ -276,11 +276,14 @@
                       # Create symlinks for CUDNN
                       ln -s ${pkgs.cudaPackages.cudnn}/lib/libcudnn.so* $out/lib/
                       
+                      # Find the torch lib directory
+                      TORCH_LIB_DIR=$(find $out/lib/python*/site-packages/torch/lib -type d | head -n 1)
+                      
                       # Ensure the torch lib directory exists
-                      mkdir -p $out/lib/python*/site-packages/torch/lib
+                      mkdir -p "$TORCH_LIB_DIR"
                       
                       # Copy CUDNN libraries directly to torch lib directory
-                      cp -P ${pkgs.cudaPackages.cudnn}/lib/libcudnn.so* $out/lib/python*/site-packages/torch/lib/
+                      cp -P ${pkgs.cudaPackages.cudnn}/lib/libcudnn.so* "$TORCH_LIB_DIR/"
                     '';
 
                     preFixup = ''
