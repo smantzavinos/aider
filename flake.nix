@@ -238,14 +238,13 @@
                       pkgs.cudaPackages.libnvjitlink
                       pkgs.cudaPackages.cudnn
                       pkgs.cudaPackages.nccl
-                      pkgs.cudaPackages.libcufft
-                      pkgs.cudaPackages.libcurand
+                      pkgs.cudaPackages.cuda_cufft
+                      pkgs.cudaPackages.cuda_curand
                       pkgs.cudaPackages.cuda_cupti
                       pkgs.cudaPackages.cuda_nvtx
                       final.nvidia-cusolver-cu12
                     ];
                     
-                    # Add runtime dependencies
                     runtimeDependencies = (old.runtimeDependencies or []) ++ [
                       pkgs.cudaPackages.cuda_cudart
                       pkgs.cudaPackages.libcublas
@@ -254,17 +253,27 @@
                       pkgs.cudaPackages.libnvjitlink
                       pkgs.cudaPackages.cudnn
                       pkgs.cudaPackages.nccl
-                      pkgs.cudaPackages.libcufft
-                      pkgs.cudaPackages.libcurand
+                      pkgs.cudaPackages.cuda_cufft
+                      pkgs.cudaPackages.cuda_curand
                       pkgs.cudaPackages.cuda_cupti
                       pkgs.cudaPackages.cuda_nvtx
                       final.nvidia-cusolver-cu12
                       final.nvidia-cusparse-cu12
                     ];
 
-                    # Set LD_LIBRARY_PATH
+                    # Add autoPatchelfHook to nativeBuildInputs
+                    nativeBuildInputs = (old.nativeBuildInputs or []) ++ [
+                      pkgs.autoPatchelfHook
+                    ];
+
                     postFixup = ''
                       ${old.postFixup or ""}
+                      
+                      # Create symlink for libcudnn.so.8
+                      mkdir -p $out/lib
+                      ln -s ${pkgs.cudaPackages.cudnn}/lib/libcudnn.so.* $out/lib/
+                      
+                      # Add all required library paths to RPATH
                       addAutoPatchelfSearchPath ${pkgs.lib.makeLibraryPath [
                         pkgs.cudaPackages.cuda_cudart
                         pkgs.cudaPackages.libcublas
@@ -273,11 +282,33 @@
                         pkgs.cudaPackages.libnvjitlink
                         pkgs.cudaPackages.cudnn
                         pkgs.cudaPackages.nccl
-                        pkgs.cudaPackages.libcufft
-                        pkgs.cudaPackages.libcurand
+                        pkgs.cudaPackages.cuda_cufft
+                        pkgs.cudaPackages.cuda_curand
                         pkgs.cudaPackages.cuda_cupti
                         pkgs.cudaPackages.cuda_nvtx
                       ]}
+
+                      # Explicitly set RPATH for torch libraries
+                      for lib in $out/lib/python*/site-packages/torch/lib/lib*.so*; do
+                        if [ -f "$lib" ]; then
+                          echo "Patching RPATH for $lib"
+                          patchelf --set-rpath "$out/lib:${pkgs.lib.makeLibraryPath [
+                            pkgs.cudaPackages.cuda_cudart
+                            pkgs.cudaPackages.libcublas
+                            pkgs.cudaPackages.libcusolver
+                            pkgs.cudaPackages.libcusparse
+                            pkgs.cudaPackages.libnvjitlink
+                            pkgs.cudaPackages.cudnn
+                            pkgs.cudaPackages.nccl
+                            pkgs.cudaPackages.cuda_cufft
+                            pkgs.cudaPackages.cuda_curand
+                            pkgs.cudaPackages.cuda_cupti
+                            pkgs.cudaPackages.cuda_nvtx
+                            final.nvidia-cusolver-cu12
+                            final.nvidia-cusparse-cu12
+                          ]}" "$lib"
+                        fi
+                      done
                     '';
                   });
 
