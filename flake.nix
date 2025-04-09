@@ -96,13 +96,18 @@
         # Package a virtual environment as our main application.
         #
         # Enable no optional dependencies for production build.
-        packages.default = pythonSet.mkVirtualEnv "aider-env" workspace.deps.default;
+        packages.default = (pythonSet.mkVirtualEnv "aider-env" workspace.deps.default).overrideAttrs (old: {
+          meta = (old.meta or {}) // {
+            mainProgram = "aider";
+          };
+        });
 
-        # Make hello runnable with `nix run`
-        apps.x86_64-linux = {
-          default = {
-            type = "app";
-            program = "${self.packages.x86_64-linux.default}/bin/aider";
+        # Make aider runnable with `nix run`
+        apps = {
+          default = flake-utils.lib.mkApp {
+            drv = self.packages.${system}.default;
+            name = "aider";
+            exePath = "/bin/aider";
           };
         };
 
