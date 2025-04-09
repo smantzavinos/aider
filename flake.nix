@@ -36,6 +36,7 @@
         };
         python = pkgs.python311;
         inherit (nixpkgs) lib;
+        inherit (pkgs.callPackages pyproject-nix.build.util { }) mkApplication;
 
         # Load the uv workspace
         workspace = uv2nix.lib.workspace.loadWorkspace { workspaceRoot = ./.; };
@@ -65,6 +66,19 @@
         
       in
       {
+
+        # default = mkApplication {
+        #   venv = pythonSet.mkVirtualEnv "aider-env" workspace.deps.all;
+        #   package = pythonSet.hello-world;
+        # };
+
+        apps.x86_64-linux = {
+          default = {
+            type = "app";
+            program = "${self.packages.${system}.default}/bin/aider";
+          };
+        };
+
         devShells = {
         
           impure = pkgs.mkShell {
