@@ -48,21 +48,6 @@
         # Add overlay for additional packages or overrides
         # Extend generated overlay with build fixups
         extraOverlay = final: prev: {
-          # # Add any necessary overrides here
-          # aider-chat = prev.aider-chat.overrideAttrs (old: {
-          #   nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ pkgs.makeWrapper ];
-          #   propagatedBuildInputs = (old.propagatedBuildInputs or []) ++ [
-          #     pkgs.git
-          #   ];
-          #
-          #   postInstall = ''
-          #     wrapProgram $out/bin/aider \
-          #       --set PYTHONPATH "${placeholder "out"}/${python.sitePackages}:$PYTHONPATH"
-          #   '';
-          # });
-          #
-          # # Create a package alias for backward compatibility
-          # aider = final.aider-chat;
         };
 
         # Construct Python package set
@@ -77,40 +62,9 @@
                 extraOverlay
               ]
             );
-
-        # aider = pythonSet.aider;
         
       in
       {
-        # packages = {
-        #   inherit aider;
-        #   default = aider;
-        # };
-        #
-        # apps.default = flake-utils.lib.mkApp {
-        #   drv = aider;
-        #   name = "aider";
-        # };
-
-
-        # Package a virtual environment as our main application.
-        #
-        # Enable no optional dependencies for production build.
-        packages.default = (pythonSet.mkVirtualEnv "aider-env" workspace.deps.default).overrideAttrs (old: {
-          meta = (old.meta or {}) // {
-            mainProgram = "aider";
-          };
-        });
-
-        # Make aider runnable with `nix run`
-        apps = {
-          default = flake-utils.lib.mkApp {
-            drv = self.packages.${system}.default;
-            name = "aider";
-            exePath = "/bin/aider";
-          };
-        };
-
         devShells = {
         
           impure = pkgs.mkShell {
@@ -137,9 +91,6 @@
               unset PYTHONPATH
             '';
           };
-
-
-
 
           pure = let
             # Create an overlay enabling editable mode for all local dependencies.
@@ -405,11 +356,6 @@
               export REPO_ROOT=$(git rev-parse --show-toplevel)
             '';
           };
-
-
-
-
-
 
 
         };
