@@ -65,21 +65,15 @@
 
       in {
         packages = {
-          default = (mkApplication {
+          default = let
             venv = pythonSet.mkVirtualEnv "aider-env" workspace.deps.default;
+          in (mkApplication {
+            inherit venv;
             package = pythonSet.aider-chat;
           }).overrideAttrs (old: {
-            nativeBuildInputs = (old.nativeBuildInputs or []) ++ [
-              pythonSet.setuptools
-              pythonSet.setuptools-scm
-              pythonSet.tomli
-              pythonSet.pip
-              pythonSet.wheel
-            ];
-            buildInputs = (old.buildInputs or []) ++ [
-              pythonSet.tomli
-            ];
-            format = "pyproject";
+            meta = (old.meta or {}) // {
+              mainProgram = "aider";
+            };
           });
         };
 
