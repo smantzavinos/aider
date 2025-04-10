@@ -28,7 +28,14 @@
     flake-parts.lib.mkFlake { inherit inputs; } {
       systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
       
-      perSystem = { config, self', inputs', pkgs, system, lib, ... }: let
+      perSystem = { config, self', inputs', pkgs, system, lib, ... }: {
+        _module.args.pkgs = import nixpkgs {
+          inherit system;
+          config = {
+            allowUnfree = true;
+          };
+        };
+      } // let
         python = pkgs.python311;
 
         # Load the uv workspace
