@@ -37,6 +37,8 @@
         };
         python = pkgs.python311;
 
+        inherit (pkgs.callPackage inputs.pyproject-nix.build.util { }) mkApplication;
+
         # Load the uv workspace
         workspace = inputs.uv2nix.lib.workspace.loadWorkspace { workspaceRoot = ./.; };
 
@@ -62,12 +64,13 @@
             );
 
       in {
-        # Package a virtual environment as our main application
         packages = {
-          default = pythonSet.mkVirtualEnv "aider-env" workspace.deps.default;
+          default = mkApplication {
+            venv = pythonSet.mkVirtualEnv "aider-env" workspace.deps.default;
+            package = pythonSet.aider-chat;
+          };
         };
 
-        # Make aider runnable with `nix run`
         apps = {
           default = {
             type = "app";
@@ -116,6 +119,9 @@
                       final.setuptools
                       final.pip
                       final.wheel
+                    ];
+                    buildInputs = (old.buildInputs or []) ++ [
+                      final.setuptools
                     ];
                     format = "pyproject";
                   });
