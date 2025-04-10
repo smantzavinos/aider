@@ -3,7 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    flake-utils.url = "github:numtide/flake-utils";
+    flake-parts.url = "github:hercules-ci/flake-parts";
 
     pyproject-nix = {
       url = "github:pyproject-nix/pyproject.nix";
@@ -24,21 +24,15 @@
     };
   };
 
-  outputs = { self, nixpkgs, flake-utils, uv2nix, pyproject-nix, pyproject-build-systems, ... }:
-    flake-utils.lib.eachDefaultSystem (system:
-      let
-        pkgs = import nixpkgs {
-          inherit system;
-          config = {
-            allowUnfree = true;
-            cudaSupport = true;
-          };
-        };
+  outputs = inputs@{ flake-parts, nixpkgs, ... }:
+    flake-parts.lib.mkFlake { inherit inputs; } {
+      systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
+      
+      perSystem = { config, self', inputs', pkgs, system, lib, ... }: let
         python = pkgs.python311;
-        inherit (nixpkgs) lib;
 
         # Load the uv workspace
-        workspace = uv2nix.lib.workspace.loadWorkspace { workspaceRoot = ./.; };
+        workspace = inputs.uv2nix.lib.workspace.loadWorkspace { workspaceRoot = ./.; };
 
         # Create package overlay from workspace
         overlay = workspace.mkPyprojectOverlay {
@@ -46,86 +40,47 @@
         };
 
         # Add overlay for additional packages or overrides
-        # Extend generated overlay with build fixups
-        extraOverlay = final: prev: {
-          # # Add any necessary overrides here
-          # aider-chat = prev.aider-chat.overrideAttrs (old: {
-          #   nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ pkgs.makeWrapper ];
-          #   propagatedBuildInputs = (old.propagatedBuildInputs or []) ++ [
-          #     pkgs.git
-          #   ];
-          #
-          #   postInstall = ''
-          #     wrapProgram $out/bin/aider \
-          #       --set PYTHONPATH "${placeholder "out"}/${python.sitePackages}:$PYTHONPATH"
-          #   '';
-          # });
-          #
-          # # Create a package alias for backward compatibility
-          # aider = final.aider-chat;
-        };
+        extraOverlay = final: prev: { };
 
         # Construct Python package set
         pythonSet =
-          (pkgs.callPackage pyproject-nix.build.packages {
+          (pkgs.callPackage inputs.pyproject-nix.build.packages {
             inherit python;
           }).overrideScope
             (
               lib.composeManyExtensions [
-                pyproject-build-systems.overlays.default
+                inputs.pyproject-build-systems.overlays.default
                 overlay
                 extraOverlay
               ]
             );
 
-        # aider = pythonSet.aider;
-        
-      in
-      {
-        # packages = {
-        #   inherit aider;
-        #   default = aider;
-        # };
-        #
-        # apps.default = flake-utils.lib.mkApp {
-        #   drv = aider;
-        #   name = "aider";
-        # };
+      in {
+        # Package a virtual environment as our main application
+        packages = {
+          default = pythonSet.mkVirtualEnv "aider-env" workspace.deps.default;
+        };
 
-
-        # Package a virtual environment as our main application.
-        #
-        # Enable no optional dependencies for production build.
-        packages.default = pythonSet.mkVirtualEnv "aider-env" workspace.deps.default;
-
-        # Make hello runnable with `nix run`
-        apps.x86_64-linux = {
+        # Make aider runnable with `nix run`
+        apps = {
           default = {
             type = "app";
-            program = "${self.packages.x86_64-linux.default}/bin/aider";
+            program = "${self'.packages.default}/bin/aider";
           };
         };
 
         devShells = {
-        
           impure = pkgs.mkShell {
             packages = [
-              # aider
               python
               pkgs.uv
             ];
     
             env = {
-              # Prevent uv from managing Python downloads
               UV_PYTHON_DOWNLOADS = "never";
-              # Force uv to use nixpkgs Python interpreter
               UV_PYTHON = python.interpreter;
-              # Ensure Python can find the package
-              # PYTHONPATH = "${aider}/${python.sitePackages}:$PYTHONPATH";
-            }// lib.optionalAttrs pkgs.stdenv.isLinux {
-                # Python libraries often load native shared objects using dlopen(3).
-                # Setting LD_LIBRARY_PATH makes the dynamic library loader aware of libraries without using RPATH for lookup.
-                LD_LIBRARY_PATH = lib.makeLibraryPath pkgs.pythonManylinuxPackages.manylinux1;
+            } // lib.optionalAttrs pkgs.stdenv.isLinux {
+              LD_LIBRARY_PATH = lib.makeLibraryPath pkgs.pythonManylinuxPackages.manylinux1;
             };
     
             shellHook = ''
@@ -133,21 +88,15 @@
             '';
           };
 
-
-
-
           pure = let
-            # Create an overlay enabling editable mode for all local dependencies.
             editableOverlay = workspace.mkEditablePyprojectOverlay {
               root = "$REPO_ROOT";
             };
 
-            # Override previous set with our overrideable overlay.
             editablePythonSet = pythonSet.overrideScope (
               lib.composeManyExtensions [
                 editableOverlay
                 (final: prev: {
-                  # Make setuptools available to all packages
                   pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
                     (pyFinal: pyPrev: {
                       setuptools = pyPrev.setuptools;
@@ -156,7 +105,6 @@
                     })
                   ];
 
-                  # Fix pyperclip build
                   pyperclip = prev.pyperclip.overrideAttrs (old: {
                     nativeBuildInputs = (old.nativeBuildInputs or []) ++ [
                       final.setuptools
@@ -166,7 +114,6 @@
                     format = "pyproject";
                   });
 
-                  # Add cusparse override
                   nvidia-cusparse-cu12 = prev.nvidia-cusparse-cu12.overrideAttrs (old: {
                     nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ pkgs.autoPatchelfHook ];
                     buildInputs = (old.buildInputs or []) ++ [
@@ -188,7 +135,6 @@
                     '';
                   });
 
-                  # Add cusolver override
                   nvidia-cusolver-cu12 = prev.nvidia-cusolver-cu12.overrideAttrs (old: {
                     nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ pkgs.autoPatchelfHook ];
                     buildInputs = (old.buildInputs or []) ++ [
@@ -198,7 +144,6 @@
                       pkgs.cudaPackages.libnvjitlink
                     ];
                     
-                    # Add runtime dependencies
                     runtimeDependencies = (old.runtimeDependencies or []) ++ [
                       pkgs.cudaPackages.cuda_cudart
                       pkgs.cudaPackages.libcublas
@@ -206,7 +151,6 @@
                       pkgs.cudaPackages.libnvjitlink
                     ];
 
-                    # Set RPATH for the libraries
                     postFixup = ''
                       ${old.postFixup or ""}
                       patchelf --set-rpath "${pkgs.lib.makeLibraryPath [
@@ -225,7 +169,6 @@
                     '';
                   });
 
-                  # Override torch to use CUDA-enabled version
                   torch = prev.torch.overrideAttrs (old: {
                     cudaSupport = true;
                     
@@ -269,17 +212,9 @@
 
                     postInstall = ''
                       ${old.postInstall or ""}
-                      
-                      # Create lib directory
                       mkdir -p $out/lib
-                      
-                      # Create symlinks for CUDNN
                       ln -s ${pkgs.cudaPackages.cudnn}/lib/libcudnn.so* $out/lib/
-                      
-                      # Create torch lib directory (more explicit path)
                       mkdir -p "$out/lib/python3.11/site-packages/torch/lib"
-                      
-                      # Copy CUDNN libraries directly to torch lib directory
                       for f in ${pkgs.cudaPackages.cudnn}/lib/libcudnn.so*; do
                         if [ -f "$f" ]; then
                           cp -P "$f" "$out/lib/python3.11/site-packages/torch/lib/"
@@ -288,7 +223,6 @@
                     '';
 
                     preFixup = ''
-                      # Add CUDA libraries to RPATH
                       CUDA_LIBS="${lib.makeLibraryPath ([
                         pkgs.cudaPackages.cuda_cudart
                         pkgs.cudaPackages.libcublas
@@ -305,10 +239,8 @@
                         final.nvidia-cusparse-cu12
                       ])}"
 
-                      # Add the output lib directory to RPATH
                       TORCH_LIBS="$out/lib:$out/lib/python*/site-packages/torch/lib"
                       
-                      # Patch all torch libraries
                       for lib in $out/lib/python*/site-packages/torch/lib/lib*.so*; do
                         if [ -f "$lib" ]; then
                           echo "Patching RPATH for $lib"
@@ -317,18 +249,15 @@
                       done
                     '';
 
-                    # Modified autoPatchelfHook configuration
                     autoPatchelfIgnoreMissingDeps = true;
                     
                     postFixup = ''
-                      # Run auto-patchelf with specific library paths
                       addAutoPatchelfSearchPath ${pkgs.cudaPackages.cudnn}/lib
                       addAutoPatchelfSearchPath $out/lib
                       addAutoPatchelfSearchPath $out/lib/python*/site-packages/torch/lib
                       
                       autoPatchelf "$out"
                       
-                      # Verify CUDNN is properly linked
                       if ! ldd $out/lib/python*/site-packages/torch/lib/libtorch_cuda.so | grep -q libcudnn.so.8; then
                         echo "Warning: libcudnn.so.8 not found in libtorch_cuda.so dependencies"
                         exit 1
@@ -336,7 +265,6 @@
                     '';
                   });
 
-                  # Fix imgcat build
                   imgcat = prev.imgcat.overrideAttrs (old: {
                     nativeBuildInputs = (old.nativeBuildInputs or []) ++ [
                       final.setuptools
@@ -346,7 +274,6 @@
                     format = "pyproject";
                   });
 
-                  # Fix aider-chat build
                   aider-chat = prev.aider-chat.overrideAttrs (old: {
                     nativeBuildInputs = (old.nativeBuildInputs or []) ++ [
                       final.setuptools
@@ -364,7 +291,6 @@
               ]
             );
 
-            # Build virtual environment with local packages being editable
             virtualenv = editablePythonSet.mkVirtualEnv "aider-dev-env" workspace.deps.all;
 
           in pkgs.mkShell {
@@ -386,10 +312,9 @@
               UV_PYTHON_DOWNLOADS = "never";
               PYTHONPATH = lib.makeSearchPath python.sitePackages [virtualenv];
                 
-              # Add CUDA library paths
               LD_LIBRARY_PATH = lib.makeLibraryPath [
                 pkgs.cudaPackages.cuda_cudart
-                pkgs.cudaPackages.libcublas  # This includes libcublasLt
+                pkgs.cudaPackages.libcublas
                 pkgs.cudaPackages.libcusolver
                 pkgs.cudaPackages.libcusparse
                 pkgs.cudaPackages.libnvjitlink
@@ -400,13 +325,7 @@
               export REPO_ROOT=$(git rev-parse --show-toplevel)
             '';
           };
-
-
-
-
-
-
-
         };
-      });
+      };
+    };
 }
