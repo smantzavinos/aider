@@ -68,6 +68,7 @@
           addMeta = drv: drv.overrideAttrs (old: {
             passthru = lib.recursiveUpdate (old.passthru or {}) {
               inherit (pythonSet.aider-chat.passthru) tests;
+              dependencies = old.passthru.dependencies or {};
             };
             
             meta = (old.meta or {}) // {
@@ -75,7 +76,8 @@
             };
           });
         in {
-          default = addMeta (pythonSet.mkVirtualEnv "aider-env" (workspace.deps.default // {
+          default = addMeta (pythonSet.mkVirtualEnv "aider-env" {
+            inherit (workspace.deps.default) propagatedBuildInputs;
             nativeBuildInputs = [
               pythonSet.setuptools
               pythonSet.pip
@@ -85,8 +87,9 @@
             buildInputs = [
               pythonSet.setuptools
               pythonSet.setuptools-scm
-            ];
-          }));
+            ] ++ (workspace.deps.default.buildInputs or []);
+            format = "other";
+          });
         };
 
         apps = {
