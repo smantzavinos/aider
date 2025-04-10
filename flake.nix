@@ -65,10 +65,16 @@
 
       in {
         packages = {
-          default = mkApplication {
+          default = (mkApplication {
             venv = pythonSet.mkVirtualEnv "aider-env" workspace.deps.default;
             package = pythonSet.aider-chat;
-          };
+          }).overrideAttrs (old: {
+            nativeBuildInputs = (old.nativeBuildInputs or []) ++ [
+              pythonSet.setuptools
+              pythonSet.pip
+              pythonSet.wheel
+            ];
+          });
         };
 
         apps = {
