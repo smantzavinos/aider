@@ -64,35 +64,29 @@
             );
 
       in {
-        packages = {
-          default = let
-            venv = pythonSet.mkVirtualEnv "aider-env" (workspace.deps.default // {
-              nativeBuildInputs = [
-                pythonSet.setuptools
-                pythonSet.pip
-                pythonSet.wheel
-                pythonSet.setuptools-scm
-              ];
-              buildInputs = [
-                pythonSet.setuptools
-                pythonSet.setuptools-scm
-              ];
-            });
-          in (mkApplication {
-            inherit venv;
-            package = pythonSet.aider-chat;
-          }).overrideAttrs (old: {
+        packages = let
+          addMeta = drv: drv.overrideAttrs (old: {
+            passthru = lib.recursiveUpdate (old.passthru or {}) {
+              inherit (pythonSet.aider-chat.passthru) tests;
+            };
+            
             meta = (old.meta or {}) // {
               mainProgram = "aider";
             };
-            
-            # Add runtime dependencies
-            propagatedBuildInputs = (old.propagatedBuildInputs or []) ++ [
+          });
+        in {
+          default = addMeta (pythonSet.mkVirtualEnv "aider-env" (workspace.deps.default // {
+            nativeBuildInputs = [
               pythonSet.setuptools
               pythonSet.pip
               pythonSet.wheel
+              pythonSet.setuptools-scm
             ];
-          });
+            buildInputs = [
+              pythonSet.setuptools
+              pythonSet.setuptools-scm
+            ];
+          }));
         };
 
         apps = {
