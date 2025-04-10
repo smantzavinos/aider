@@ -78,17 +78,16 @@
         in {
           default = addMeta (pythonSet.mkVirtualEnv "aider-env" {
             inherit (workspace.deps.default) propagatedBuildInputs;
-            nativeBuildInputs = [
-              pythonSet.setuptools
-              pythonSet.pip
-              pythonSet.wheel
-              pythonSet.setuptools-scm
+            nativeBuildInputs = with pythonSet; [
+              setuptools
+              pip
+              wheel
+              setuptools-scm
             ];
-            buildInputs = [
-              pythonSet.setuptools
-              pythonSet.setuptools-scm
+            buildInputs = with pythonSet; [
+              setuptools
+              setuptools-scm
             ] ++ (workspace.deps.default.buildInputs or []);
-            format = "other";
           });
         };
 
