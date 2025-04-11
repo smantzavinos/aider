@@ -77,9 +77,7 @@
           });
         in {
           default = addMeta (pythonSet.mkVirtualEnv "aider-env" {
-            propagatedBuildInputs = with pythonSet; [
-              aider-chat
-            ];
+            propagatedBuildInputs = workspace.deps.all.propagatedBuildInputs or [];
             nativeBuildInputs = with pythonSet; [
               setuptools
               pip
